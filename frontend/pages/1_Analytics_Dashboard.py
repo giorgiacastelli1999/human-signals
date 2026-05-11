@@ -5,6 +5,7 @@ import plotly.express as px
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
+from config import API_URL
 
 # =========================
 # CONFIG
@@ -59,7 +60,10 @@ st.divider()
 # FETCH DATA
 # =========================
 
-response = requests.get("http://127.0.0.1:8000/entries")
+#response = requests.get("http://127.0.0.1:8000/entries")
+#response = requests.get("https://human-signals.onrender.com")
+
+response=requests.get(f"{API_URL}/entries")
 
 entries = response.json()
 
