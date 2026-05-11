@@ -19,9 +19,14 @@ st.set_page_config(
 
 load_dotenv()
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
-)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+client = None
+
+if OPENAI_API_KEY:
+    client = OpenAI(
+        api_key=OPENAI_API_KEY
+    )
 
 # =========================
 # CUSTOM STYLING
@@ -60,12 +65,19 @@ st.divider()
 # FETCH DATA
 # =========================
 
-#response = requests.get("http://127.0.0.1:8000/entries")
-#response = requests.get("https://human-signals.onrender.com")
+try:
 
-response=requests.get(f"{API_URL}/entries")
+    response = requests.get(f"{API_URL}/entries")
 
-entries = response.json()
+    entries = response.json()
+
+except requests.exceptions.ConnectionError:
+
+    st.error(
+        "Backend server unavailable. Check API deployment."
+    )
+
+    st.stop()
 
 df = pd.DataFrame(entries)
 
@@ -272,64 +284,74 @@ with tab4:
 
     st.subheader("AI Behavioral Reflection")
 
-    try:
+    if client:
 
-        ai_response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": """
-                    You are a behavioral analytics assistant.
+        try:
 
-                    Analyze emotional and behavioral patterns.
-                    Be insightful, concise and supportive.
-                    """
-                },
-                {
-                    "role": "user",
-                    "content": summary_data
-                }
-            ]
+            ai_response = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """
+                        You are a behavioral analytics assistant.
+
+                        Analyze emotional and behavioral patterns.
+                        Be insightful, concise and supportive.
+                        """
+                    },
+                    {
+                        "role": "user",
+                        "content": summary_data
+                    }
+                ]
+            )
+
+            insight = ai_response.choices[0].message.content
+
+            st.info(insight)
+
+        except Exception:
+
+            st.warning(
+                "AI service unavailable — using local behavioral analysis."
+            )
+
+    else:
+
+        st.warning(
+            "AI insights unavailable. Missing OpenAI API key."
         )
 
-        insight = ai_response.choices[0].message.content
+    insights = []
 
+    if avg_stress > 7:
+        insights.append(
+            "📈 Elevated stress levels detected across recent entries."
+        )
+
+    if df["sleep_hours"].mean() < 6:
+        insights.append(
+            "😴 Reduced sleep consistency may be impacting emotional stability."
+        )
+
+    if df["exercised"].mean() > 0.5:
+        insights.append(
+            "🏃 Exercise appears positively associated with mood regulation."
+        )
+
+    if df["worked_late"].mean() > 0.5:
+        insights.append(
+            "💻 Frequent late work sessions correlate with increased stress."
+        )
+
+    if len(insights) == 0:
+        insights.append(
+            "✅ Emotional and behavioral patterns currently appear relatively stable."
+        )
+
+    for insight in insights:
         st.info(insight)
-
-    except Exception:
-
-        st.warning("AI service unavailable — using local behavioral analysis.")
-
-        insights = []
-
-        if avg_stress > 7:
-            insights.append(
-                "📈 Elevated stress levels detected across recent entries."
-            )
-
-        if df["sleep_hours"].mean() < 6:
-            insights.append(
-                "😴 Reduced sleep consistency may be impacting emotional stability."
-            )
-
-        if df["exercised"].mean() > 0.5:
-            insights.append(
-                "🏃 Exercise appears positively associated with mood regulation."
-            )
-
-        if df["worked_late"].mean() > 0.5:
-            insights.append(
-                "💻 Frequent late work sessions correlate with increased stress."
-            )
-
-        if len(insights) == 0:
-            insights.append(
-                "✅ Emotional and behavioral patterns currently appear relatively stable."
-            )
-
-        for insight in insights:
-            st.info(insight)
 
 st.divider()
 
