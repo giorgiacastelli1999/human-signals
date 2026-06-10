@@ -56,4 +56,4 @@ Streamlit → FastAPI → PostgreSQL → Analytics → AI Insights
 
 Live App: https://human-signals.streamlit.app/
 
-Backend API: [Add Render URL]
+Backend API: https://human-signals.onrender.com/docs#/
